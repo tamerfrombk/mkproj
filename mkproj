@@ -52,6 +52,12 @@ TARGET_INCLUDE_DIRECTORIES(\${APP_EXE} PRIVATE \${CMAKE_SOURCE_DIR}/include)
     # this is a common name for a CMake out-of-source build
     echo -e '\nbuild/\n' >> .gitignore
 
+    # ignore cache directories
+    echo '.cache/' >> .gitignore
+
+    # ignore compile_commands.json for clangd
+    echo 'compile_commands.json' >> .gitignore
+
     # initialize Git
     git init && git add . && git commit -m 'Initial commit.'
 }
