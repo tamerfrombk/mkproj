@@ -46,7 +46,7 @@ TARGET_INCLUDE_DIRECTORIES(\${APP_EXE} PRIVATE \${CMAKE_SOURCE_DIR}/include)
 " > CMakeLists.txt
 
     # fetch .gitignore
-    wget https://www.toptal.com/developers/gitignore/api/c -q -O .gitignore
+    wget https://www.toptal.com/developers/gitignore/api/c -q -O .gitignore || fatal "could not fetch .gitignore"
 
     # ignore the 'build/' directory as well
     # this is a common name for a CMake out-of-source build
