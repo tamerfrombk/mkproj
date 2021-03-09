@@ -17,3 +17,7 @@ A simple shell script to set up a programming environment for various languages.
 | Language | Flag     | Environment Created |
 | -------- | -------- | ------------------- |
 | `C`      | `[cC]`   | ![c tree](/resources/c/tree.png) |
+
+### Contributing
+
+Simply raise a PR with your changes. Once review is done and all is well, I'll merge your changes in.
