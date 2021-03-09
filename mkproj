@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+
+fatal() {
+    echo -e "$1" && exit 1
+}
+
+create_c() {
+    mkdir -p src include
+
+    # generate a file in include/ to make sure Git commit adds the 'include/' directory
+    touch include/.placeholder
+
+    # generate the README
+    echo -e "# $name" > README.md
+
+    # generate main
+    echo -e "\
+#include <stdio.h>
+
+int main(int argc, char **argv) {
+    for (int i = 1; i < argc; ++i) {
+        printf(\"%i: %s\\\\n\", i, argv[i]);
+    }
+}
+" > src/main.c
+
+    # generate CMake
+    echo -e "\
+CMAKE_MINIMUM_REQUIRED(VERSION 3.0.0)
+PROJECT($name VERSION 1.0.0)
+
+SET(CMAKE_C_STANDARD 99)
+SET(CMAKE_C_STANDARD_REQUIRED ON)
+SET(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+
+# @PLATFORM: this works with Clang/GCC but will be an issue with MSVC
+SET(CMAKE_C_WARNING_FLAGS \"-Wall -Wextra -Wpedantic\")
+SET(CMAKE_C_FLAGS \"\${CMAKE_C_FLAGS} \${CMAKE_C_WARNING_FLAGS}\")
+
+SET(APP_EXE $name)
+
+ADD_EXECUTABLE(\${APP_EXE} src/main.c)
+
+TARGET_INCLUDE_DIRECTORIES(\${APP_EXE} PRIVATE \${CMAKE_SOURCE_DIR}/include)
+
+" > CMakeLists.txt
+
+    # fetch .gitignore
+    wget https://www.toptal.com/developers/gitignore/api/c -q -O .gitignore
+
+    # ignore the 'build/' directory as well
+    # this is a common name for a CMake out-of-source build
+    echo -e '\nbuild/\n' >> .gitignore
+
+    # initialize Git
+    git init && git add . && git commit -m 'Initial commit.'
+}
+
+main() {
+    [ "$#" -lt "2" ] && fatal "mkproj <project_name> <language> [base_directory]"
+
+    name="$1"
+    lang="$2"
+
+    # figure out the base directory of the project
+    base_dir="$3"        && [ -z "$base_dir" ] && base_dir="$(pwd)"
+    [ ! -d "$base_dir" ] && fatal "base directory '$base_dir' is not a directory"
+
+    # make sure the project directory does not exist and create it
+    # NOTE: from this point on, all commands should assume that they are already in the project directory
+    dir="$base_dir/$name" && [ -d "$dir" ] && fatal "project directory '$dir' already exists!"
+    mkdir -p "$dir" && cd "$dir"
+
+    case "$lang" in
+        [cC]) create_c || exit 1 ;;
+        *)    echo "unknown language $lang" || exit 1 ;;
+    esac
+}
+
+main "$@"
