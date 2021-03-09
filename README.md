@@ -12,6 +12,12 @@ A simple shell script to set up a programming environment for various languages.
 
 `[base_directory]` is the _optional_ base directory to create the project directory in so that all the project files will be created in `<base_directory>/<project_name>`. If this is not specified, the current working directory is used, otherwise the supplied directory is used. Any supplied directories must already exist and the project directory must not already exist; in other words `<base_directory>` must exist but `<base_directory>/<project_name>` must not exist.
 
+### Installing
+
+Run `make`. By default, the installation directory will be `/usr/local/bin` and `make` will require `sudo` privileges. 
+
+You can override the default installation directory by overriding the `INSTALLDIR` variable. e.g. `make INSTALLDIR=$HOME/bin` will install the script into `$HOME/bin` instead of `/usr/local/bin`.
+
 ### Supported Languages
 
 | Language | Flag     | Environment Created |
