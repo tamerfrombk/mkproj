@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0.0)
 PROJECT($name VERSION 1.0.0)
 
-SET(CMAKE_C_STANDARD 99)
+SET(CMAKE_C_STANDARD 11)
 SET(CMAKE_C_STANDARD_REQUIRED ON)
 SET(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
@@ -48,9 +48,12 @@ TARGET_INCLUDE_DIRECTORIES(\${APP_EXE} PRIVATE \${CMAKE_SOURCE_DIR}/include)
     # fetch .gitignore
     wget https://www.toptal.com/developers/gitignore/api/c -q -O .gitignore || fatal "could not fetch .gitignore"
 
+    # add a new line to start our ignore changes
+    echo -e '\n' >> .gitignore
+
     # ignore the 'build/' directory as well
     # this is a common name for a CMake out-of-source build
-    echo -e '\nbuild/\n' >> .gitignore
+    echo 'build/' >> .gitignore
 
     # ignore cache directories
     echo '.cache/' >> .gitignore
@@ -59,7 +62,7 @@ TARGET_INCLUDE_DIRECTORIES(\${APP_EXE} PRIVATE \${CMAKE_SOURCE_DIR}/include)
     echo 'compile_commands.json' >> .gitignore
 
     # initialize Git
-    git init && git add . && git commit -m 'Initial commit.'
+    git init && git add . && git commit -m "mkproj ($name) initial commit."
 }
 
 main() {
