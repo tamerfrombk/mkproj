@@ -18,7 +18,7 @@ Run `make install`. By default, the installation directory will be `/usr/local/b
 
 You can override the default installation directory by overriding the `INSTALLDIR` variable. e.g. `make install INSTALLDIR=$HOME/bin` will install the script into `$HOME/bin` instead of `/usr/local/bin`.
 
-To uninstall, run 'make uninstall`. If you've modified `INSTALLDIR` during a `make install`, you'll need to supply the modified `INSTALLDIR` on `make uninstall`. eg. `make uninstall INSTALLDIR=$HOME/bin`.
+To uninstall, run `make uninstall`. If you've modified `INSTALLDIR` during a `make install`, you'll need to supply the modified `INSTALLDIR` on `make uninstall`. eg. `make uninstall INSTALLDIR=$HOME/bin`.
 
 ### Supported Languages
 
