@@ -61,6 +61,76 @@ def get_project_details(argc, argv):
     return (project_name, project_lang, project_dir)
 
 
+def generate_readme(project_name, project_lang):
+    build_instructions = "how to build your project"
+    if project_lang.lower() == 'c' or project_lang.lower() == 'cxx':
+        build_instructions = """
+This is a classic out-of-source CMake build. Run the following in the root of your source tree:
+
+```
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=release ..
+cmake --build .
+```
+
+This will build `%s` inside of the `build` directory.
+""" % project_name
+
+    install_instructions = "how to install/uninstall your project"
+    if project_lang.lower() == 'c' or project_lang.lower() == 'cxx':
+        install_instructions = """
+Run `make install`. By default, the installation directory will be `/usr/local/bin` and make will require `sudo` privileges.
+
+You can override the default installation directory by overriding the `INSTALLDIR` variable. e.g. `make install INSTALLDIR=$HOME/bin` will install the script into `$HOME/bin` instead of `/usr/local/bin`.
+
+To uninstall, run `make uninstall`. If you've modified `INSTALLDIR` during a `make install`, you'll need to supply the modified `INSTALLDIR` on `make uninstall`. eg. `make uninstall INSTALLDIR=$HOME/bin`.
+"""
+
+
+    readme_template = """
+# $NAME
+
+a short synopsis of what your project is about
+
+### Introduction
+
+what your project is about and why you wrote it
+
+### Building
+
+$BUILD
+
+### Installing/Uninstalling
+
+$INSTALL
+
+### Usage
+
+how to use your project with examples!
+
+### Limitations
+
+list out any limitations to your program here
+
+### Technologies Used
+
+list out your library dependencies, versions, etc
+
+### Contributing
+
+how to contribute to your project
+"""
+
+    readme = readme_template \
+        .replace('$NAME', project_name) \
+        .replace('$BUILD', build_instructions) \
+        .replace('$INSTALL', install_instructions)
+
+    with open('README.md', "w+") as f:
+        f.write(readme)
+
+
 def generate_main(path):
     with open(path, "w+") as f:
         f.write("""
@@ -75,7 +145,7 @@ int main(int argc, char **argv) {
 
 
 def generate_cmake(project_dir, project_name, cmake_language_identifier):
-    main_source_name = "src/main.c" if cmake_language_identifier == 'c' else "src/main.cc"
+    main_source_name = "src/main.c" if cmake_language_identifier.lower() == 'c' else "src/main.cc"
     
     cmake_template = """\
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0.0)
@@ -141,6 +211,8 @@ def create_c_project(project_name, project_dir):
     # generate a file in include/ to make sure Git commit adds the 'include/' directory
     touch('include/.placeholder')
 
+    generate_readme(project_name, 'c')
+
     # generate main
     with open('src/main.c', "w+") as f:
         f.write("""
@@ -178,6 +250,8 @@ def create_cxx_project(project_name, project_dir):
 
     # generate a file in include/ to make sure Git commit adds the 'include/' directory
     touch('include/.placeholder')
+
+    generate_readme(project_name, 'cxx')
 
     # generate main
     with open('src/main.cc', "w+") as f:
