@@ -19,6 +19,10 @@ def usage(exit_code=0):
     exit(exit_code)
 
 
+def getenv(key):
+    return os.environ[key]
+
+
 def cd(dir):
     os.chdir(dir)
 
@@ -36,6 +40,14 @@ def touch(*files):
     for file in files:
         f = open(file, "w+")
         f.close()
+
+
+def nonemptyinput(prompt):
+    line = input(prompt)
+    if line is None or line == '':
+        fatal("empty line read")
+    
+    return line
 
 
 def oneof(v, *values):
@@ -189,7 +201,7 @@ def create_git_repo(project_name):
             return
 
 
-def fetch_gitignore(language_code):
+def create_gitignore(language_code):
     wget = [
         "wget"
         , "https://www.toptal.com/developers/gitignore/api/%s" % language_code
@@ -198,10 +210,18 @@ def fetch_gitignore(language_code):
         ".gitignore"
     ]
 
-    proc = subprocess.run(wget)
+    if subprocess.run(wget).returncode != 0:
+        error("unable to fetch .gitignore file for '%s'" % language_code)
+        return
 
-    return proc.returncode
-
+    # add additional ignores
+    with open('.gitignore', 'a') as f:
+        f.write("\n".join([
+            "build/" # this is a common name for CMake out-of-source build
+            , ".cache/"
+            , "compile_commands.json" # ignore clangd compile_commands.json
+            , ".vscode/"
+        ]))
 
 def create_c_project(project_name, project_dir):
     print("creating C project '%s' in '%s'" % (project_name, project_dir))
@@ -227,18 +247,7 @@ int main(int argc, char **argv) {
 
     generate_cmake(project_dir, project_name, 'C')
 
-    # fetch .gitignore
-    if fetch_gitignore("c") != 0:
-        error("unable to fetch .gitignore file")
-
-    # add additional ignores
-    with open('.gitignore', 'a') as f:
-        f.write("\n".join([
-            "build/" # this is a common name for CMake out-of-source build
-            , ".cache/"
-            , "compile_commands.json" # ignore clangd compile_commands.json
-            , ".vscode/"
-        ]))
+    create_gitignore("c")
 
     create_git_repo(project_name)
 
@@ -267,18 +276,43 @@ int main(int argc, char **argv) {
 
     generate_cmake(project_dir, project_name, 'CXX')
 
-    # fetch .gitignore
-    if fetch_gitignore("c++") != 0:
-        error("unable to fetch .gitignore file")
+    create_gitignore("c++")
 
-    # add additional ignores
-    with open('.gitignore', 'a') as f:
-        f.write("\n".join([
-            "build/" # this is a common name for CMake out-of-source build
-            , ".cache/"
-            , "compile_commands.json" # ignore clangd compile_commands.json
-            , ".vscode/"
-        ]))
+    create_git_repo(project_name)
+
+
+# based off of https://starkandwayne.com/blog/switching-to-go-modules/
+def create_go_project(project_name, project_dir):
+    repo = nonemptyinput("enter upstream url (e.g. github.com): ")
+    username = nonemptyinput("enter your username: ")
+    
+    print("creating go project '%s' in '%s'" % (project_name, project_dir))
+
+    module_path = repo + "/" + username + "/" + project_name
+    mod_init = ("go mod init %s" % module_path).split(' ')
+    
+    proc = subprocess.run(mod_init)
+    if proc.returncode != 0:
+        fatal("couldn't execute '%s' in '%s'" % (mod_init, project_dir))
+
+    command_pkg = "cmd/%s" % project_name
+    mkdir(command_pkg)
+
+    # create main.go
+    with open(command_pkg + "/" + "main.go", "w+") as f:
+        f.write("""
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("Hello from mkproj.")
+}
+""")
+
+    generate_readme(project_name, 'go')
+    
+    create_gitignore("go")
 
     create_git_repo(project_name)
 
@@ -297,6 +331,8 @@ def main(argc, argv):
         create_c_project(project_name, project_dir)
     elif oneof(project_lang, "cxx", "cpp", "c++"):
         create_cxx_project(project_name, project_dir)
+    elif oneof(project_lang, "go"):
+        create_go_project(project_name, project_dir)
     else:
         fatal("unknown language '%s'" % project_lang)
 
