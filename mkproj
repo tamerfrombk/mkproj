@@ -281,7 +281,6 @@ int main(int argc, char **argv) {
     create_git_repo(project_name)
 
 
-# based off of https://starkandwayne.com/blog/switching-to-go-modules/
 def create_go_project(project_name, project_dir):
     repo = nonemptyinput("enter upstream url (e.g. github.com): ")
     username = nonemptyinput("enter your username: ")
