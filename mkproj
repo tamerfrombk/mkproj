@@ -1,92 +1,174 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python
 
-fatal() {
-    echo -e "$1" && exit 1
-}
+import sys
+import os
+import subprocess
 
-create_c() {
-    mkdir -p src include
+def error(msg):
+    print("ERROR: " + msg)
 
-    # generate a file in include/ to make sure Git commit adds the 'include/' directory
-    touch include/.placeholder
 
-    # generate the README
-    echo -e "# $name" > README.md
+def fatal(msg):
+    print(msg)
+    exit(1)
 
-    # generate main
-    echo -e "\
+
+def usage(exit_code=0):
+    print("mkproj <project_name> <language> [base_directory]")
+    exit(exit_code)
+
+
+def cd(dir):
+    os.chdir(dir)
+
+
+def pwd():
+    return os.getcwd()
+
+
+def mkdir(*dir_paths):
+    for p in dir_paths:
+        os.makedirs(p)
+
+
+def touch(*files):
+    for file in files:
+        f = open(file, "w+")
+        f.close()
+
+
+def oneof(v, *values):
+    for value in values:
+        if v == value:
+            return True
+    
+    return False
+
+
+def get_project_details(argc, argv):
+    project_name = argv[1]
+    project_lang = argv[2]
+    
+    base_dir = argv[3] if argc == 4 else pwd()
+    if not os.path.isdir(base_dir):
+        fatal("'%s' is not a dir" % base_dir)
+
+    project_dir = base_dir + "/" + project_name
+    if os.path.isdir(project_dir):
+        fatal("project directory '%s' already exists" % project_dir)
+
+    return (project_name, project_lang, project_dir)
+
+
+def generate_main(path):
+    with open(path, "w+") as f:
+        f.write("""
 #include <stdio.h>
 
 int main(int argc, char **argv) {
     for (int i = 1; i < argc; ++i) {
-        printf(\"%i: %s\\\\n\", i, argv[i]);
+        printf("%i: %s\\n", i, argv[i]);
     }
 }
-" > src/main.c
+""")
 
-    # generate CMake
-    echo -e "\
+# TODO: adapt this for C++ as well
+def generate_cmake(project_dir, project_name, language):
+    cmake_template = """\
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0.0)
-PROJECT($name VERSION 1.0.0)
+PROJECT($NAME VERSION 1.0.0)
 
 SET(CMAKE_C_STANDARD 11)
 SET(CMAKE_C_STANDARD_REQUIRED ON)
 SET(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 # @PLATFORM: this works with Clang/GCC but will be an issue with MSVC
-SET(CMAKE_C_WARNING_FLAGS \"-Wall -Wextra -Wpedantic\")
-SET(CMAKE_C_FLAGS \"\${CMAKE_C_FLAGS} \${CMAKE_C_WARNING_FLAGS}\")
+SET(CMAKE_C_WARNING_FLAGS "-Wall -Wextra -Wpedantic")
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_C_WARNING_FLAGS}")
 
-SET(APP_EXE $name)
+SET(APP_EXE $NAME)
 
-ADD_EXECUTABLE(\${APP_EXE} src/main.c)
+ADD_EXECUTABLE(${APP_EXE} src/main.c)
 
-TARGET_INCLUDE_DIRECTORIES(\${APP_EXE} PRIVATE \${CMAKE_SOURCE_DIR}/include)
+TARGET_INCLUDE_DIRECTORIES(${APP_EXE} PRIVATE ${CMAKE_SOURCE_DIR}/include)
+"""
 
-" > CMakeLists.txt
+    cmake = cmake_template.replace('$NAME', project_name)
+
+    with open(project_dir + "/" + "CMakeLists.txt", "w+") as f:
+        f.write(cmake)
+
+
+def create_git_repo(project_name):
+    git_commit_msg = "mkproj " + project_name + " initial commit."
+    git_cmds = [
+        "git init".split(' ')
+        , "git add .".split(' ')
+        , ["git", "commit", "-m", git_commit_msg]
+    ]
+
+    for cmd in git_cmds:
+        proc = subprocess.run(cmd)
+        if proc.returncode != 0:
+            error("couldn't execute %s" % cmd)
+            return
+
+def fetch_gitignore(language_code):
+    wget = [
+        "wget"
+        , "https://www.toptal.com/developers/gitignore/api/%s" % language_code
+        , "-q"
+        , "-O"
+        ".gitignore"
+    ]
+
+    proc = subprocess.run(wget)
+
+    return proc.returncode
+
+
+def create_c_project(project_name, project_dir):
+    print("creating C %s project in %s" % (project_name, project_dir))
+    
+    mkdir("src", "include")
+
+    # generate a file in include/ to make sure Git commit adds the 'include/' directory
+    touch('include/.placeholder')
+
+    generate_main('src/main.c')
+    generate_cmake(project_dir, project_name, 'C')
 
     # fetch .gitignore
-    wget https://www.toptal.com/developers/gitignore/api/c -q -O .gitignore || fatal "could not fetch .gitignore"
+    if fetch_gitignore("c") != 0:
+        error("unable to fetch .gitignore file")
 
-    # add a new line to start our ignore changes
-    echo -e '\n' >> .gitignore
+    # add additional ignores
+    with open('.gitignore', 'a') as f:
+        f.write("\n".join([
+            "build/" # this is a common name for CMake out-of-source build
+            , ".cache/"
+            , "compile_commands.json" # ignore clangd compile_commands.json
+            , ".vscode/"
+        ]))
 
-    # ignore the 'build/' directory as well
-    # this is a common name for a CMake out-of-source build
-    echo 'build/' >> .gitignore
+    create_git_repo(project_name)
 
-    # ignore cache directories
-    echo '.cache/' >> .gitignore
 
-    # ignore compile_commands.json for clangd
-    echo 'compile_commands.json' >> .gitignore
+def main(argc, argv):
+    if argc < 3:
+        usage(1)
+    
+    (project_name, project_lang, project_dir) = get_project_details(argc, argv)
 
-    # ignore vscode directory
-    echo '.vscode/' >> .gitignore
+    # NOTE: from this point on, all projects should assume that they are already in the project directory
+    mkdir(project_dir)
+    cd(project_dir)
 
-    # initialize Git
-    git init && git add . && git commit -m "mkproj ($name) initial commit."
-}
+    if oneof(project_lang, "c", "C"):
+        create_c_project(project_name, project_dir)
+    else:
+        fatal("unknown language '%s'" % project_lang)
 
-main() {
-    [ "$#" -lt "2" ] && fatal "mkproj <project_name> <language> [base_directory]"
 
-    name="$1"
-    lang="$2"
-
-    # figure out the base directory of the project
-    base_dir="$3"        && [ -z "$base_dir" ] && base_dir="$(pwd)"
-    [ ! -d "$base_dir" ] && fatal "base directory '$base_dir' is not a directory"
-
-    # make sure the project directory does not exist and create it
-    # NOTE: from this point on, all commands should assume that they are already in the project directory
-    dir="$base_dir/$name" && [ -d "$dir" ] && fatal "project directory '$dir' already exists!"
-    mkdir -p "$dir" && cd "$dir"
-
-    case "$lang" in
-        [cC]) create_c || exit 1 ;;
-        *)    echo "unknown language $lang" || exit 1 ;;
-    esac
-}
-
-main "$@"
+if __name__ == '__main__':
+    main(len(sys.argv), sys.argv)
