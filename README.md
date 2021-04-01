@@ -25,6 +25,7 @@ To uninstall, run `make uninstall`. If you've modified `INSTALLDIR` during a `ma
 | Language | Flag     | Environment Created |
 | -------- | -------- | ------------------- |
 | `C`      | `[cC]`   | ![c tree](/resources/c/tree.png) |
+| `C++`    | `c++\|cxx\|cpp` | ![cxx tree](/resources/cxx/tree.png) |
 
 ### Contributing
 
