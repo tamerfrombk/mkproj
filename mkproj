@@ -72,7 +72,8 @@ def get_project_details(argc, argv):
 
     return (project_name, project_lang, project_dir)
 
-def generate_build_instructions(project_lang):
+
+def generate_build_instructions(project_name, project_lang):
     pl = project_lang.lower()
     
     build_instructions = ""
@@ -87,6 +88,10 @@ cmake -DCMAKE_BUILD_TYPE=release ..
 cmake --build .
 ```
 """.strip()
+    elif pl == "go":
+        build_instructions = ("""
+go build cmd/%s/main.go
+""" % project_name).strip()
     else:
         build_instructions = "how to build your project"
 
@@ -104,6 +109,12 @@ You can override the default installation directory by overriding the `INSTALLDI
 
 To uninstall, run `make uninstall`. If you've modified `INSTALLDIR` during a `make install`, you'll need to supply the modified `INSTALLDIR` on `make uninstall`. eg. `make uninstall INSTALLDIR=$HOME/bin`.
 """.strip()
+    elif pl == "go":
+        install_instructions = """
+`go install ...`
+
+This will build the binary and place it in $GOBIN.
+""".strip()
     else:
         install_instructions = "how to install/uninstall your project"
 
@@ -111,7 +122,7 @@ To uninstall, run `make uninstall`. If you've modified `INSTALLDIR` during a `ma
 
 
 def generate_readme(project_name, project_lang):
-    build_instructions = generate_build_instructions(project_lang)
+    build_instructions = generate_build_instructions(project_name, project_lang)
     install_instructions = generate_install_instructions(project_lang)
 
     readme_template = """
