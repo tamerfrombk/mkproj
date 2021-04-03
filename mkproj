@@ -72,10 +72,11 @@ def get_project_details(argc, argv):
 
     return (project_name, project_lang, project_dir)
 
-
-def generate_readme(project_name, project_lang):
-    build_instructions = "how to build your project"
-    if project_lang.lower() == 'c' or project_lang.lower() == 'cxx':
+def generate_build_instructions(project_lang):
+    pl = project_lang.lower()
+    
+    build_instructions = ""
+    if oneof(pl, "c", "cxx"):
         build_instructions = """
 This is a classic out-of-source CMake build. Run the following in the root of your source tree:
 
@@ -85,20 +86,33 @@ cd build
 cmake -DCMAKE_BUILD_TYPE=release ..
 cmake --build .
 ```
+""".strip()
+    else:
+        build_instructions = "how to build your project"
 
-This will build `%s` inside of the `build` directory.
-""" % project_name
+    return build_instructions
 
-    install_instructions = "how to install/uninstall your project"
-    if project_lang.lower() == 'c' or project_lang.lower() == 'cxx':
+def generate_install_instructions(project_lang):
+    pl = project_lang.lower()
+
+    install_instructions = ""
+    if oneof(pl, "c", "cxx"):
         install_instructions = """
 Run `make install`. By default, the installation directory will be `/usr/local/bin` and make will require `sudo` privileges.
 
 You can override the default installation directory by overriding the `INSTALLDIR` variable. e.g. `make install INSTALLDIR=$HOME/bin` will install the script into `$HOME/bin` instead of `/usr/local/bin`.
 
 To uninstall, run `make uninstall`. If you've modified `INSTALLDIR` during a `make install`, you'll need to supply the modified `INSTALLDIR` on `make uninstall`. eg. `make uninstall INSTALLDIR=$HOME/bin`.
-"""
+""".strip()
+    else:
+        install_instructions = "how to install/uninstall your project"
 
+    return install_instructions
+
+
+def generate_readme(project_name, project_lang):
+    build_instructions = generate_build_instructions(project_lang)
+    install_instructions = generate_install_instructions(project_lang)
 
     readme_template = """
 # $NAME
